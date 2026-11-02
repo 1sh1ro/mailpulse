@@ -382,17 +382,18 @@ class Runner:
         if not digest_due(local_now, config, state.digest_last_sent_date):
             return
         today = local_now.strftime("%Y-%m-%d")
+        recent = utc_now() - timedelta(hours=24)
         failures = [
             f"{entry.account} {entry.message_id}"
             for entry in state.ledger.values()
-            if entry.status == MessageStatus.FAILED.value
+            if entry.status == MessageStatus.FAILED.value and entry.at >= recent
         ]
         account_errors = [
             f"{name} {document.last_error}"
             for name, document in state.accounts.items()
             if document.last_error
         ]
-        if not state.digest_queue:
+        if not state.digest_queue and not failures and not account_errors:
             state.digest_last_sent_date = today
             self._store.save(state)
             return

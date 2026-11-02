@@ -76,9 +76,10 @@ flowchart TD
 | `TELEGRAM_CHAT_ID` | Telegram 会话标识 |
 | `STATE_GITHUB_TOKEN` | 有权读写状态仓库的个人访问令牌 |
 
-4. 另外建一个私有的状态仓库，只用来存放 `mailpulse-state/state.json`。`STATE_GITHUB_TOKEN` 需要 `contents: write` 权限。
-5. 在私有仓库的 `Actions` 页面手动触发一次 `mailpulse`，`mode` 选择 `init`，这一步只建立新邮件边界并补扫初始化窗口。
-6. 之后定时任务每 15 分钟触发一次；代码内的 `sync.check_interval_minutes` 会再次把关实际检查间隔。
+4. 在同一页面添加仓库变量 `MAILPULSE_ENABLED`，值为 `true`。公开仓库没有这个变量，定时任务会自动跳过，不会空跑。
+5. 另外建一个私有的状态仓库，只用来存放 `mailpulse-state/state.json`。`STATE_GITHUB_TOKEN` 需要 `contents: write` 权限。
+6. 在私有仓库的 `Actions` 页面手动触发一次 `mailpulse`，`mode` 选择 `init`，这一步只建立新邮件边界并补扫初始化窗口。
+7. 之后定时任务每 15 分钟触发一次；代码内的 `sync.check_interval_minutes` 会再次把关实际检查间隔。
 
 密钥与接口地址只存在于仓库机密里，`config.yaml` 里只写环境变量名。
 

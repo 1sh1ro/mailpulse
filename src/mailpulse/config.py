@@ -157,12 +157,6 @@ class SourceList(_Strict):
             raise ValueError(f"重复条目：{', '.join(sorted(duplicates))}")
         return normalized
 
-    @model_validator(mode="after")
-    def _not_empty(self) -> SourceList:
-        if not self.senders and not self.domains:
-            raise ValueError("黑白名单至少要有一个发件人或域名")
-        return self
-
     @property
     def entries(self) -> tuple[str, ...]:
         return self.senders + self.domains

@@ -158,6 +158,14 @@ def test_keyword_normalized(tmp_path):
     assert config.filtering.keywords[0].keywords == ("promo",)
 
 
+def test_empty_allowlist_and_blocklist_accepted(tmp_path):
+    payload = _deep_merge(
+        BASE, {"filtering": {"allowlist": {"senders": [], "domains": []}, "blocklist": {"senders": [], "domains": []}}}
+    )
+    config = load_config(_write(tmp_path, payload))
+    assert config.filtering.allowlist.entries == ()
+
+
 def test_sync_mode_only_new_only(tmp_path):
     payload = _deep_merge(BASE, {"sync": {"mode": "full_scan"}})
     with pytest.raises(ConfigError):

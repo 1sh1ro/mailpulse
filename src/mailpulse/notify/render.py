@@ -5,7 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from ..config import DigestConfig
-from ..models import Action, Category, Decision, Message
+from ..models import Decision, Message
 from ..state.models import DigestItem
 
 
@@ -103,19 +103,3 @@ def split_message(text: str, limit: int) -> list[str]:
     if current:
         chunks.append("\n".join(current))
     return chunks
-
-
-def action_label(action: Action) -> str:
-    return {
-        Action.NOTIFY: "通知",
-        Action.DIGEST: "摘要",
-        Action.MUTE: "静默",
-    }[action]
-
-
-def category_label(category: Category) -> str:
-    return {
-        Category.PROMOTIONAL: "推广",
-        Category.IMPORTANT: "重要",
-        Category.NORMAL: "普通",
-    }[category]

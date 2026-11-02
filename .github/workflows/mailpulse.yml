@@ -23,6 +23,7 @@ permissions:
 
 jobs:
   check:
+    if: vars.MAILPULSE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
