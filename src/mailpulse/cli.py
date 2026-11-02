@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     try:
         runner = Runner(config)
-        results = runner.run(mode=args.command, force=args.force)
+        results = runner.run(mode=args.command, force=getattr(args, "force", False))
     except (StateError, StateConflict, RunError, AiError, NotifyError) as exc:
         print(f"运行失败：{exc}", file=sys.stderr)
         return 1

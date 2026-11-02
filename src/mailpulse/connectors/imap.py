@@ -162,12 +162,48 @@ class ImapConnector:
         )
         if typ != "OK":
             raise ConnectorError(f"搜索文件夹 {folder} 失败：{data}")
-        uids = sorted(
+        candidates = sorted(
             uid
             for uid in (int(item) for item in (data[0] or b"").split() if item.isdigit())
             if uid <= max_uid
         )
-        return self._fetch_uids(folder, uids)
+        if not candidates:
+            return []
+        internal_dates = self._fetch_internal_dates(candidates)
+        kept = [
+            uid
+            for uid in candidates
+            if uid in internal_dates and internal_dates[uid] >= since
+        ]
+        return self._fetch_uids(folder, kept)
+
+    def _fetch_internal_dates(self, uids: list[int]) -> dict[int, datetime]:
+        connection = self._connection()
+        result: dict[int, datetime] = {}
+        for start in range(0, len(uids), self._batch_size):
+            chunk = uids[start : start + self._batch_size]
+            typ, data = connection.uid(
+                "FETCH", ",".join(str(uid) for uid in chunk), "(UID INTERNALDATE)"
+            )
+            if typ != "OK":
+                raise ConnectorError(f"读取邮件接收时间失败：{data}")
+            for item in data:
+                if isinstance(item, tuple):
+                    item = item[0]
+                if not isinstance(item, bytes):
+                    continue
+                text = item.decode(errors="replace")
+                uid_match = _UID_RE.search(text)
+                date_match = _INTERNALDATE_RE.search(text)
+                if not uid_match or not date_match:
+                    continue
+                try:
+                    result[int(uid_match.group(1))] = datetime.strptime(
+                        date_match.group(1), "%d-%b-%Y %H:%M:%S %z"
+                    ).astimezone(timezone.utc)
+                except ValueError:
+                    continue
+        return result
 
     def _fetch_uids(self, folder: str, uids: list[int]) -> list[Message]:
         connection = self._connection()
