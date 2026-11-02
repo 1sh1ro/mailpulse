@@ -7,6 +7,7 @@ import sys
 
 from .ai.classifier import AiError
 from .config import ConfigError, load_config
+from .notify.telegram import NotifyError
 from .pipeline import RunError, Runner
 from .state.store import StateConflict, StateError
 
@@ -82,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         runner = Runner(config)
         results = runner.run(mode=args.command, force=args.force)
-    except (StateError, StateConflict, RunError, AiError) as exc:
+    except (StateError, StateConflict, RunError, AiError, NotifyError) as exc:
         print(f"运行失败：{exc}", file=sys.stderr)
         return 1
     return _report(results)

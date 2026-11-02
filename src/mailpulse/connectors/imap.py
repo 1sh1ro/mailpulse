@@ -51,17 +51,24 @@ class ImapConnector:
     def connect(self) -> None:
         timeout = self._account.timeout_seconds
         context = ssl.create_default_context(cafile=self._account.tls_ca_file)
-        if self._account.use_ssl:
-            connection = imaplib.IMAP4_SSL(
-                self._account.host,
-                self._account.port,
-                ssl_context=context,
-                timeout=timeout,
-            )
-        else:
-            plain = imaplib.IMAP4(self._account.host, self._account.port, timeout=timeout)
-            plain.starttls(ssl_context=context)
-            connection = plain
+        try:
+            if self._account.use_ssl:
+                connection = imaplib.IMAP4_SSL(
+                    self._account.host,
+                    self._account.port,
+                    ssl_context=context,
+                    timeout=timeout,
+                )
+            else:
+                plain = imaplib.IMAP4(
+                    self._account.host, self._account.port, timeout=timeout
+                )
+                plain.starttls(ssl_context=context)
+                connection = plain
+        except OSError as exc:
+            raise ConnectorError(
+                f"无法连接 IMAP 服务器 {self._account.host}:{self._account.port}：{exc}"
+            ) from exc
         try:
             connection.login(self._username, self._password)
         except imaplib.IMAP4.error as exc:

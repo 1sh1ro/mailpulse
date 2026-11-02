@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import re
 from datetime import datetime, timezone
 from email import message_from_bytes, policy
 
@@ -52,15 +51,18 @@ class GmailConnector:
         self._token: str | None = None
 
     def connect(self) -> None:
-        response = self._client.post(
-            _TOKEN_URL,
-            data={
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-                "refresh_token": self._refresh_token,
-                "grant_type": "refresh_token",
-            },
-        )
+        try:
+            response = self._client.post(
+                _TOKEN_URL,
+                data={
+                    "client_id": self._client_id,
+                    "client_secret": self._client_secret,
+                    "refresh_token": self._refresh_token,
+                    "grant_type": "refresh_token",
+                },
+            )
+        except httpx.HTTPError as exc:
+            raise ConnectorError(f"Gmail 令牌刷新网络错误：{exc}") from exc
         if response.status_code != 200:
             raise ConnectorError(
                 f"Gmail 令牌刷新失败：HTTP {response.status_code} {response.text[:200]}"
@@ -77,12 +79,22 @@ class GmailConnector:
         return {"Authorization": f"Bearer {self._token}"}
 
     def _get(self, path: str, params: dict | None = None) -> dict:
-        response = self._client.get(f"{_API}{path}", headers=self._headers(), params=params)
+        try:
+            response = self._client.get(
+                f"{_API}{path}", headers=self._headers(), params=params
+            )
+        except httpx.HTTPError as exc:
+            raise ConnectorError(f"Gmail 请求失败：{exc}") from exc
         self._raise_for_status(response)
         return response.json()
 
     def _post(self, path: str, body: dict) -> dict:
-        response = self._client.post(f"{_API}{path}", headers=self._headers(), json=body)
+        try:
+            response = self._client.post(
+                f"{_API}{path}", headers=self._headers(), json=body
+            )
+        except httpx.HTTPError as exc:
+            raise ConnectorError(f"Gmail 请求失败：{exc}") from exc
         self._raise_for_status(response)
         return response.json() if response.content else {}
 

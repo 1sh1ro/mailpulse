@@ -5,10 +5,10 @@ import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from .ai.classifier import AiError, Classifier
+from .ai.classifier import Classifier
 from .config import Config, GmailAccount, ImapAccount
 from .connectors.base import Connector, ConnectorError, FetchResult
-from .connectors.gmail import GmailConnector
+from .connectors.gmail import GmailConnector, HistoryExpired
 from .connectors.imap import ImapConnector
 from .models import (
     AccountRunResult,
@@ -149,12 +149,28 @@ class Runner:
                 document.last_error = None
                 self._store.save(state)
                 return
-            self._run_new(account, connector, state, folder_state, result)
+            try:
+                self._run_new(account, connector, state, folder_state, result)
+            except HistoryExpired:
+                logger.warning("账户 %s 的 Gmail 游标已过期，进入安全恢复", account.id)
+                self._recover_gmail(account, connector, state, folder_state)
+                self._run_sweep(account, connector, state, folder_state, result)
+                self._run_new(account, connector, state, folder_state, result)
             document.last_run = utc_now()
             document.last_error = None
             self._store.save(state)
         finally:
             connector.close()
+
+    def _recover_gmail(self, account, connector, state, folder_state) -> None:
+        boundary = connector.read_boundary(connector.folder)
+        folder_state.pending.clear()
+        folder_state.cursor_history_id = boundary.history_id
+        folder_state.sweep = SweepWindow(
+            since=folder_state.last_success_at or (utc_now() - timedelta(days=1)),
+            max_history_id=boundary.history_id,
+        )
+        self._store.save(state)
 
     def _initialize(self, account, connector, state, document, folder_state) -> None:
         if folder_state.init_started_at is None:
