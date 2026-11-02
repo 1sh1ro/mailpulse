@@ -1,0 +1,92 @@
+version: 1
+
+accounts:
+  - id: personal
+    connector: imap
+    host: imap.example.com
+    port: 993
+    username_env: MAIL_USER
+    password_env: MAIL_PASSWORD
+    folder: INBOX
+    use_ssl: true
+
+  - id: work
+    connector: gmail
+    client_id_env: GMAIL_CLIENT_ID
+    client_secret_env: GMAIL_CLIENT_SECRET
+    refresh_token_env: GMAIL_REFRESH_TOKEN
+    query: "in:inbox"
+
+ai:
+  provider: openai_compatible
+  base_url_env: AI_BASE_URL
+  api_key_env: AI_API_KEY
+  model: your-model-id
+  language: zh-CN
+  timeout_seconds: 60
+  max_body_chars: 6000
+  concurrency: 4
+  max_attempts: 3
+
+filtering:
+  enabled: true
+  default_block_action: mute
+
+  allowlist:
+    senders:
+      - important@example.com
+    domains:
+      - github.com
+
+  blocklist:
+    senders:
+      - spam@example.com
+    domains:
+      - ads.example.org
+
+  keywords:
+    - keywords:
+        - 限时折扣
+        - 优惠券
+        - 抽奖
+      action: mute
+
+  ai_rules:
+    - name: promotional-email
+      instruction: >
+        Identify promotional, marketing, coupon and unsolicited sales emails.
+        Do not block security alerts, receipts, billing notices or important
+        account notifications.
+      action: mute
+
+    - name: important-email
+      instruction: >
+        Identify emails requiring a reply, decision, code review, or action.
+      action: notify
+
+notifications:
+  telegram:
+    enabled: true
+    token_env: TELEGRAM_BOT_TOKEN
+    chat_id_env: TELEGRAM_CHAT_ID
+
+digest:
+  enabled: true
+  timezone: Asia/Shanghai
+  time: "09:00"
+
+sync:
+  mode: new_only
+  check_interval_minutes: 30
+  mark_as_read: false
+  batch_size: 50
+  max_attempts: 5
+
+storage:
+  backend: github_private_state
+  repo: your-name/mailpulse-state
+  path: mailpulse-state/state.json
+  token_env: STATE_GITHUB_TOKEN
+  branch: main
+  persist_email_body: false
+  ledger_retention_days: 30

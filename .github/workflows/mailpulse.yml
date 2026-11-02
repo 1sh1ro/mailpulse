@@ -1,0 +1,67 @@
+name: mailpulse
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "init 只建立新邮件边界，run 正常检查并推送"
+        required: true
+        default: run
+        type: choice
+        options:
+          - run
+          - init
+
+concurrency:
+  group: mailpulse
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装依赖
+        run: pip install -e .
+
+      - name: 检查配置文件
+        run: |
+          if [ ! -f config.yaml ]; then
+            echo "缺少 config.yaml，请从 config.example.yaml 复制并填写。" >&2
+            exit 1
+          fi
+
+      - name: 校验配置
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          STATE_GITHUB_TOKEN: ${{ secrets.STATE_GITHUB_TOKEN }}
+        run: mailpulse --config config.yaml validate
+
+      - name: 运行检查
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          AI_BASE_URL: ${{ secrets.AI_BASE_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          STATE_GITHUB_TOKEN: ${{ secrets.STATE_GITHUB_TOKEN }}
+        run: mailpulse --config config.yaml "${{ inputs.mode || 'run' }}"
